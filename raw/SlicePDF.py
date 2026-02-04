@@ -1,11 +1,11 @@
-"""Split a PDF in the `materials/` directory into per-page PDFs.
+"""Split a PDF or PDFs in a dir into per-page PDFs.
 
 Usage (from repo root):
     python -m raw.SlicePDF <pdf_filename_or_path>
 
 Examples:
-    python -m raw.SlicePDF "铝冶炼工艺 (王克勤主编, 王克勤主编, 王克勤) (Z-Library).pdf"
-    python -m raw.SlicePDF materials/sample.pdf
+    python -m raw.SlicePDF "example.pdf"
+    python -m raw.SlicePDF path/to/pdf/dir/
 """
 
 from __future__ import annotations
@@ -65,16 +65,7 @@ def split_pdf(pdf_path: Path, materials_dir: Optional[Path] = None, from_z_lib: 
         out_path = output_dir / f"page_{idx:03d}.pdf"
         with out_path.open("wb") as f:
             writer.write(f)
-    # for page in reader.pages:
-    #     if page.mediabox.width > page.mediabox.height:
-    #         continue
-    #     idx += 1
-    #     writer = PdfWriter()
-    #     writer.add_page(page)
-    #     fullpage.add_page(page)
-    #     out_path = output_dir / f"page_{idx:03d}.pdf"
-    #     with out_path.open("wb") as f:
-    #         writer.write(f)
+
     fullpage_path = output_dir.parent / f"{resolved_pdf.stem}_fullpages.pdf"
     with fullpage_path.open("wb") as f:
         fullpage.write(f)
