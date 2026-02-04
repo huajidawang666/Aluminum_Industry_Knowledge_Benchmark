@@ -2,3 +2,4 @@
 /.vscode
 /input.txt
 __pycache__/
+scripts_debug/
