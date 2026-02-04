@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -105,8 +106,6 @@ def build_reasoning_prompt(input_text: str, count: int = 5) -> str:
    }}
 """
 
-# api key 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
-
 # --------------------------- helpers ---------------------------
 
 def load_text(path: str | Path) -> str:
@@ -138,10 +137,9 @@ def save_json(data: Any, path: str | Path) -> None:
    Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=4), encoding="utf-8")
 
 
-def call_chat_completion(prompt: str, model: str, temperature: float, max_tokens: int) -> str:
+def call_chat_completion(prompt: str, model: str, temperature: float, max_tokens: int, api_key: str, base_url: str) -> str:
    """调用 OpenAI Chat Completions API。"""
-
-   client = OpenAI(base_url="https://openrouter.ai/api/v1",api_key="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")
+   client = OpenAI(base_url=base_url,api_key=api_key)
    response = client.chat.completions.create(
       model=model,
       messages=[{"role": "user", "content": prompt}],
@@ -189,6 +187,18 @@ def main() -> None:
       action="store_true",
       help="打印提示词内容（无论是否 dry-run）。",
    )
+   parser.add_argument(
+      "--api-key",
+      type=str,
+      default=None,
+      help="OpenAI API Key，若未指定则使用环境变量 OPENAI_API_KEY。",
+   )
+   parser.add_argument(
+      "--base-url",
+      type=str,
+      default="https://api.openai.com/v1",
+      help="OpenAI API 基础 URL，默认为官方地址。",
+   )
 
    args = parser.parse_args()
 
@@ -213,6 +223,8 @@ def main() -> None:
       model=args.model,
       temperature=args.temperature,
       max_tokens=args.max_tokens,
+      api_key=args.api_key or os.getenv("OPENAI_API_KEY"),
+      base_url=args.base_url,
    )
 
    if not content:
