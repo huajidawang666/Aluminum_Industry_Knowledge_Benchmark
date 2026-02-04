@@ -1,101 +1,127 @@
 # Aluminum Industry Knowledge Benchmark: 铝工业知识评测基准
 
-> **注意**：本项目目前正在建设中。仅部分实现了预处理、OCR和问题生成模块。
+> **注意**：本项目正在建设中。下文包含当前实现模块、进度以及如何运行核心脚本的示例（bash）。
 
 ## 1. 项目概述
 
-AlElec 是一个致力于构建用于评测大语言模型（LLMs）在铝工业领域知识水平的基准数据集的项目。
+本项目旨在构建一套用于评估大语言模型（LLMs）在铝工业领域知识水平的基准数据集（问答对、推理题）。来源优先采用教材、专著与综述，例如《铝冶炼工艺》。
 
-我们的目标是创建一套来源于教材、专著和综述（例如《铝冶炼工艺》）等权威来源的标准化问答对。数据集涵盖铝冶金的各个方面，包括：
-- 历史与发展
-- 性质与用途
-- 原料与前处理工艺
-- 电解原理与工艺流程
-- 设备与关键部件
-- 工艺参数与控制
-- 环境治理
-- 智能制造
+主要目标：
+- 使用可复现的管道从 PDF -> OCR 文本 -> LLM 生成题目 -> 人工校验 -> 最终数据集。
+- 提供工具脚本以加速预处理、OCR、切分与数据合并工作流。
 
-数据集构建流程遵循 **“LLM辅助生成 + 人工校验”** 的工作流。
+## 2. 当前进度（更新于 2026-02-04）
 
-## 2. 方法论
+- PDF 拆分（按页）: 已实现（`raw/SlicePDF.py`） ✅
+- OCR 集成（上传/下载与解压）: 已实现（`raw/OCR.py`，依赖外部服务） ✅
+- 基于提示词调用 LLM 生成问题: 已实现（`dataset/dataset.py`） ✅
+- 文本拆分/分块（Markdown header 拆分）: 已实现（`raw/splitter.py`） ✅
+- 合并问题与人工标注: 已实现基础工具（`utils/process_json.py`） ✅
+- 待完成：数据清洗、批量人工校验界面、最终导出与评估脚本 ⏳
 
-构建流程包含以下阶段：
-1.  **数据收集**：收集权威PDF文档（存储在 `materials/` 中）。
-2.  **预处理**：将PDF文档拆分为单页，以利于细粒度的OCR和后续处理。
-3.  **OCR与数字化**：使用OCR工具将PDF页面转换为机器可读文本。
-4.  **问题生成**：使用LLM（通过RAG技术）从提取的文本中生成结构化问题（涵盖事实类、工艺类、推理类）。
-
-## 3. 项目结构
+## 3. 代码与文件清单（关键项）
 
 ```
-AlElec/
-├── dataset/                # 数据集管理脚本
-│   └── dataset.py          # 基于提示词调用LLM生成问题的脚本
-├── materials/              # 源PDF文件资料
-│   ├── raw/                # 原始PDF输入
-│   └── processed/          # 预处理/拆分后的PDF页面及OCR缓存
-├── output/                 # 生成的问题和结果
-├── raw/                    # 预处理和OCR脚本
-│   ├── SlicePDF.py         # 用于将PDF拆分为单页文件的脚本
-│   └── OCR.py              # 对拆分后的页面执行OCR识别的脚本
+Aluminum_Industry_Knowledge_Benchmark/
+├── dataset/                      # 数据集相关脚本
+│   └── dataset.py                # 从文本构建 LLM 提示并调用生成题目
+├── materials/                    # 原始资料与处理结果
+│   ├── labeled/                  # 分块标签
+│   ├── ocr/                      # OCR 结果
+│   ├── processed/                # 拆分后的页面
+│   ├── raw/                      # 原始 PDF 文件
+│   └── split_markdown/           # Markdown 分块
+├── output/                       # 生成的题目/中间结果
+├── raw/                          # 预处理与 OCR 脚本
+│   ├── SlicePDF.py               # 将 PDF 拆分为按页 PDF 文件
+│   ├── OCR.py                    # 上传/下载并解压 OCR 结果
+│   └── splitter.py               # Markdown header 分块工具
+├── schemes/
+│   └── 方案.md / 详细方案.md      # 项目计划与设计说明
 ├── utils/
-│   └── process_json.py     # 用于合并问题和标签的工具
-├── input.txt               # 输入提示词或文本数据
-├── questions.json          # 示例/临时生成的问题文件
-├── requirements.txt        # Python依赖
-└── 方案.md                 # 详细的项目计划和设计文档
+│   └── process_json.py           # 合并问题与标签（生成最终数据集）
+├── requirements.txt              # Python 依赖
+└── README.md                     # 本文件
 ```
 
-## 4. 使用方法
+## 4. 快速上手（bash 示例）
 
-### 前置要求
-安装所需的依赖项：
+1) 安装依赖（建议在虚拟环境中运行）
+
 ```bash
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 第一步：预处理（拆分PDF）
-将源PDF拆分为单独的页面进行处理。
-```bash
-# 示例
-python -m raw.SlicePDF "path/to/your/document.pdf"
-```
-运行后，将在 `materials/processed/` 目录下创建一个与文件名同名的文件夹，其中包含拆分后的按页PDF文件。
+2) 拆分 PDF（把 `path/to/doc.pdf` 换成你的文件）
 
-### 第二步：光学字符识别（OCR）
-运行OCR脚本将拆分后的PDF转换为文本数据。
+```bash
+python -m raw.SlicePDF "path/to/doc.pdf"
+```
+
+输出位置示例：`materials/processed/<doc_stem>/page_001.pdf` 等
+
+3) 运行 OCR（注意：脚本使用外部 API，需配置令牌）
+
 ```bash
 python raw/OCR.py
 ```
-*注意：该脚本目前通过API接口调用外部OCR服务，请确保配置了正确的访问令牌。*
 
-### 第三步：问题生成
-从处理后的文本中自动生成问题。
+4) 从文本生成题目（示例：事实类/单选+判断）
 
 ```bash
-# 生成事实类/工艺类客观题（单选+判断）
-python dataset/dataset.py "path/to/text.txt" --mode objective --output output/objective.json
-
-# 生成推理类主观题（故障诊断/因果分析）
-python dataset/dataset.py "path/to/text.txt" --mode reasoning --output output/reasoning.json
+python dataset/dataset.py "path/to/text.txt" \
+    --mode objective \
+    --output output/objective.json
+# optional choices:
+    --api-key YOUR_API_KEY_HERE \
+    --base-url YOUR_API_BASE_URL_HERE \
+    --single-choice 5 \
+    --true-false 5 \
+    --model gpt-4o-mini \
+    --temperature 0.7 \
+    --max-tokens 512 
 ```
 
-*提示：可以通过 `python dataset/dataset.py --help` 查看更多参数选项。*
+或生成推理类题目：
 
-### 第四步：数据合并（可选）
-如果需要将生成的问题与人工标注的标签合并。
 ```bash
-python utils/process_json.py
+python dataset/dataset.py "path/to/text.txt" \
+    --mode reasoning \
+    --output output/reasoning.json
+# optional choices:
+    --api-key YOUR_API_KEY_HERE \
+    --base-url YOUR_API_BASE_URL_HERE
+    --reasoning-count 5 \
+    --model gpt-4o-mini \
+    --temperature 0.7 \
+    --max-tokens 512 \
 ```
 
-## 5. 路线图
-- [x] PDF 预处理（页面拆分）
-- [x] OCR 集成
-- [x] 基础问题生成
-- [ ] 数据清洗与格式统一
-- [ ] 人工校验接口/工具
-- [ ] 最终数据集组装与导出
+5) 合并问题与人工标注（如果已分别保存）
 
-## 许可协议
-[License Information]
+```bash
+python utils/process_json.py questions.json labels.json --output output/final_dataset.json
+```
+
+## 5. 重要注意事项
+
+- 请不要在代码仓库中硬编码任何 API 密钥或凭证（例如 OpenAI/其他服务密钥）。
+- `dataset/dataset.py` 及 `raw/OCR.py` 中含有示例调用或占位，请确保在部署前将秘钥迁移到环境变量（如 `OPENAI_API_KEY`）或安全的凭证存储中。
+- 模型生成的题目必须要人工复核后方可进入数据集；当前 pipeline 假设“LLM 生成 -> 人工校验 -> 合并”。
+
+## 6. 下一步 / 待办
+
+- 完成数据清洗与格式标准化脚本
+- 搭建一个简单的人工校验界面（或 CSV 导出/导入流程）
+- 扩展评估脚本以运行 LLMs 对最终数据集的测评
+
+## 7. 联系与贡献
+
+欢迎以 Issue 或 PR 方式贡献。若需要加入专有/受限资料，请先在本地处理并遵守版权与合规要求。
+
+---
+
+（本文件最后更新：2026-02-04）
+
+```
