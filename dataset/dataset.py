@@ -175,8 +175,9 @@ def main() -> None:
    parser.add_argument("--max-tokens", type=int, default=2000, help="最大返回 tokens")
    parser.add_argument(
       "--output",
+      default="./output/result.json",
       type=str,
-      help="结果输出路径（Json）。若未指定则打印到 stdout。",
+      help="结果输出路径（Json）。若未指定则打印到 ./output/result.json。",
    )
    parser.add_argument(
       "--dry-run",
