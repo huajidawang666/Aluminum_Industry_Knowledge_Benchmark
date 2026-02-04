@@ -1,3 +1,4 @@
+import argparse
 import requests
 import json
 from pathlib import Path
@@ -6,11 +7,8 @@ import hashlib
 import zipfile
 import os
 
-token = "eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFM1MTIifQ.eyJqdGkiOiI0MzgwMDk0MSIsInJvbCI6IlJPTEVfUkVHSVNURVIiLCJpc3MiOiJPcGVuWExhYiIsImlhdCI6MTc3MDEzODA1MCwiY2xpZW50SWQiOiJsa3pkeDU3bnZ5MjJqa3BxOXgydyIsInBob25lIjoiIiwib3BlbklkIjpudWxsLCJ1dWlkIjoiY2YzMTVkMTItZTMxYy00NjVhLTg4NGEtNDc3N2I0Y2YxM2U2IiwiZW1haWwiOiJ6aG91eXUyMDA3MTAyOEBnbWFpbC5jb20iLCJleHAiOjE3NzEzNDc2NTB9.hffQknx8rGIa3exaSxXyipZclVmBwb2_zOqAzB0AScL_XLbAs7YhnY-PKMPWKODrQX2HGkA4wd8MyDnbGfkV9g"
-header = {
-    "Content-Type": "application/json",
-    "Authorization": f"Bearer {token}"
-}
+token = ""
+header = {}
 pdf_url = Path('./materials/processed/')
 
 def construct_pdf_data(pdf_url: Path = pdf_url) :
@@ -163,7 +161,21 @@ def download_results(result, download_dir: Path = Path('./materials/ocr/'), pdf_
     with open(hash_file, 'w', encoding='utf-8') as f:
         json.dump(processed_files, f, ensure_ascii=False, indent=4)
 
+def _parse_args():
+    parser = argparse.ArgumentParser(description="Upload PDFs for OCR processing and download results.")
+    parser.add_argument("--api-key", type=str, help="API key for authentication", required=False)
+    return parser.parse_args()
+
+
 def main():
+    args = _parse_args()
+    global token, header
+    token = args.api_key if args.api_key else token
+    header = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+    
     file_path, data = construct_pdf_data()
     batch_id = upload_pdfs(file_path, data)
     if batch_id:
