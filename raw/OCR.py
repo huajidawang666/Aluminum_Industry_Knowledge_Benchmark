@@ -116,7 +116,7 @@ def get_resolve_result(batch_id: str):
             return
 
 
-def download_results(result, download_dir: Path = Path('./materials/processed/ocr/'), pdf_url: Path = pdf_url):
+def download_results(result, download_dir: Path = Path('./materials/ocr/'), pdf_url: Path = pdf_url):
     download_dir.mkdir(parents=True, exist_ok=True)
     extract_results = result.get("data", {}).get("extract_result", [])
     
